@@ -55,17 +55,21 @@ def fetch_naver_news(query: str, display: int = 5) -> list[dict]:
     with urllib.request.urlopen(req, timeout=10) as resp:
         data = json.loads(resp.read().decode("utf-8"))
 
+    cutoff = datetime.now() - timedelta(days=3)
     articles = []
     for item in data.get("items", []):
-        title = strip_html(item.get("title", ""))
-        description = strip_html(item.get("description", ""))
-        link = item.get("link", "")
-        pub_date = item.get("pubDate", "")
+        pub_date_str = item.get("pubDate", "")
+        try:
+            pub_dt = datetime.strptime(pub_date_str, "%a, %d %b %Y %H:%M:%S %z")
+            if pub_dt.replace(tzinfo=None) < cutoff:
+                continue
+        except ValueError:
+            continue
         articles.append({
-            "title": title,
-            "description": description,
-            "link": link,
-            "pub_date": pub_date,
+            "title": strip_html(item.get("title", "")),
+            "description": strip_html(item.get("description", "")),
+            "link": item.get("link", ""),
+            "pub_date": pub_date_str,
         })
     return articles
 
@@ -88,7 +92,7 @@ def collect_news() -> dict[str, list[dict]]:
                 category_articles.extend(articles)
             except Exception as e:
                 print(f"[WARNING] '{brand}' 검색 실패: {e}")
-        results[category] = deduplicate(category_articles)
+        results[category] = deduplicate(category_articles)[:10]
     return results
 
 
