@@ -154,19 +154,23 @@ def build_html_email(news: dict[str, list[dict]]) -> str:
 def send_email(subject: str, html_body: str) -> None:
     sender = os.environ["GMAIL_ADDRESS"]
     password = os.environ["GMAIL_APP_PASSWORD"]
-    recipient = os.environ.get("RECIPIENT_EMAIL", sender)
+    recipients = [
+        addr.strip()
+        for addr in os.environ.get("RECIPIENT_EMAIL", sender).split(",")
+        if addr.strip()
+    ]
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = subject
     msg["From"] = sender
-    msg["To"] = recipient
+    msg["To"] = ", ".join(recipients)
     msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
         server.login(sender, password)
-        server.sendmail(sender, recipient, msg.as_string())
+        server.sendmail(sender, recipients, msg.as_string())
 
-    print(f"[OK] 이메일 발송 완료 → {recipient}")
+    print(f"[OK] 이메일 발송 완료 → {', '.join(recipients)}")
 
 
 def main():
