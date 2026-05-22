@@ -19,7 +19,10 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from html import unescape
+from pathlib import Path
 import re
+
+LOCK_FILE = Path("/tmp/hamipichi_sent.lock")
 
 
 BRANDS = {
@@ -177,9 +180,26 @@ def send_email(subject: str, html_body: str) -> None:
     print(f"[OK] 이메일 발송 완료 → {', '.join(recipients)}")
 
 
+def already_sent_today() -> bool:
+    """오늘 이미 발송했는지 확인 (중복 발송 방지)"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    if LOCK_FILE.exists() and LOCK_FILE.read_text().strip() == today:
+        return True
+    return False
+
+
+def mark_sent_today() -> None:
+    today = datetime.now().strftime("%Y-%m-%d")
+    LOCK_FILE.write_text(today)
+
+
 def main():
     print("=== 프랜차이즈 신메뉴 뉴스 크롤러 시작 ===")
     print(f"실행 시각: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    if already_sent_today():
+        print("[INFO] 오늘 이미 발송 완료. 중복 발송 방지로 종료합니다.")
+        return
 
     news = collect_news()
 
@@ -197,6 +217,7 @@ def main():
     html_body = build_html_email(news)
 
     send_email(subject, html_body)
+    mark_sent_today()
     print("=== 완료 ===")
 
 

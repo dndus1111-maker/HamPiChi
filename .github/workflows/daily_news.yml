@@ -2,8 +2,9 @@ name: Daily Franchise New Menu News
 
 on:
   schedule:
-    # 매일 오전 11시 KST = UTC 02:00
+    # 매일 오전 11시 KST = UTC 02:00 (여러 시간대로 재시도)
     - cron: "0 2 * * *"
+    - cron: "30 2 * * *"
   workflow_dispatch: # 수동 실행 지원
 
 jobs:
@@ -27,3 +28,12 @@ jobs:
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
         run: python news_crawler/main.py
+
+  # repo 비활성화 방지 (60일 이상 커밋 없으면 cron 중단됨)
+  keep-alive:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: gautamkrishnar/keepalive-workflow@v2
